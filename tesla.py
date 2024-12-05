@@ -150,11 +150,12 @@ class FileBasedModbusDataStore(ModbusSlaveContext):
                     values=values
                 )
                 
-                logger.info(f"Full Modbus Response (Hex): {full_response}")
-                
                 # In dummy mode, just log. In normal mode, return values
                 if not self.dummy_mode:
+                    logger.info(f"Full Modbus Response (Hex): {full_response}")
                     return values
+                else:
+                    logger.info(f"Full Modbus Response (not sent) (Hex): {full_response}")
             
             # Return None if no valid response (effectively no response)
             return None
@@ -184,48 +185,23 @@ def run_modbus_server(port='/dev/ttyUSB0', baudrate=115200, dummy_mode=False):
         # Start the server
         logger.info(f"Starting Modbus RTU Server on {port} at {baudrate} baud")
         logger.info(f"Dummy Mode: {'Enabled' if dummy_mode else 'Disabled'}")
+        # List all available response files
+        response_files = os.listdir('responses')
+        logger.info(f"Available response files: {response_files}")
         
         if dummy_mode:
             # In dummy mode, simulate server behavior
-            logger.info("Dummy Mode: Simulating Modbus server requests")
-            
-            # List all available response files
-            response_files = os.listdir('responses')
-            logger.info(f"Available response files: {response_files}")
-            
-            # Simulate periodic requests to each available register address
-            while True:
-                for register_file in response_files:
-                    try:
-                        register_address = int(register_file)
-                        
-                        # Simulate a read request (Function Code 3 - Read Holding Registers)
-                        logger.info(f"Dummy Mode: Simulating request for register {register_address}")
-                        
-                        # Use getValues to simulate reading from the file
-                        values = datastore.getValues(fx=3, address=register_address, count=1)
-                        
-                        if values:
-                            logger.info(f"Simulated Response for register {register_address}: {values}")
-                        else:
-                            logger.warning(f"No response found for register {register_address}")
-                        
-                    except ValueError:
-                        # Skip files that aren't named with a valid integer
-                        logger.debug(f"Skipping non-register file: {register_file}")
-                
-                # Wait between simulated request cycles
-                time.sleep(5)
-        else:
-            # Normal server mode
-            StartSerialServer(
-                context, 
-                framer=ModbusRtuFramer,
-                identity=identity,
-                port=port, 
-                timeout=1,
-                baudrate=baudrate
-            )
+            logger.info("Dummy Mode: Simulating Modbus server responses")   
+        
+        # Normal server mode
+        StartSerialServer(
+            context, 
+            framer=ModbusRtuFramer,
+            identity=identity,
+            port=port, 
+            timeout=1,
+            baudrate=baudrate
+        )
     except serial.SerialException as e:
         logger.error(f"Serial port error: {e}")
     except Exception as e:
