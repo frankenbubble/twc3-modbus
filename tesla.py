@@ -1,4 +1,4 @@
-# v0.1
+# v0.2
 import os
 import sys
 import logging
@@ -132,11 +132,15 @@ class FileBasedModbusDataStore(ModbusSlaveContext):
         :param count: Number of registers to read
         :return: List of register values
         """
+        # Construct a hex representation of the request
+        request_hex = self.format_request_hex(fx, address, count)
+        
         # Log the incoming request details
         logger.info(f"Received request: "
                     f"Function Code: {fx}, "
                     f"Address: {address}, "
                     f"Count: {count}")
+        logger.info(f"Request Hex: {request_hex}")
         
         if fx in [3, 4]:  # Read Holding Registers or Input Registers
             values = self.validate_file_response(address, count)
@@ -162,6 +166,33 @@ class FileBasedModbusDataStore(ModbusSlaveContext):
         
         # Default behavior for other function codes
         return super().getValues(fx, address, count)
+
+    def format_request_hex(self, function_code, address, count):
+        """
+        Format the Modbus request as a hex string
+        
+        :param function_code: Modbus function code
+        :param address: Starting register address
+        :param count: Number of registers to read
+        :return: Hex representation of the request
+        """
+        # Construct request payload
+        payload = [
+            0x01,  # Slave address (default)
+            function_code,  # Function code
+            (address >> 8) & 0xFF,  # High byte of address
+            address & 0xFF,  # Low byte of address
+            (count >> 8) & 0xFF,  # High byte of count
+            count & 0xFF  # Low byte of count
+        ]
+        
+        # Calculate CRC
+        crc = self.calculate_crc(payload)
+        payload.extend([crc & 0xFF, (crc >> 8) & 0xFF])
+        
+        # Convert to hex string
+        return ' '.join(f'{x:02X}' for x in payload)
+
 
 def run_modbus_server(port='/dev/ttyUSB0', baudrate=115200, dummy_mode=False):
     """
