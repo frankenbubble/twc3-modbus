@@ -12,5 +12,5 @@ python -u tesla.py
 Specify Custom Port:
 python -u tesla.py --port /dev/ttyUSB1
 
-Dummy Mode (Simulation):
+Dummy Mode (it won't send the response on the wire):
 python -u tesla.py --dummy
